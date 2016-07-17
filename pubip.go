@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/miekg/dns"
 )
@@ -16,7 +17,8 @@ type Context struct {
 }
 
 func generateAnswerRecord(host string, w dns.ResponseWriter) (dns.RR, error) {
-	remoteAddress := w.RemoteAddr().String()
+	remoteAddress := strings.Split(w.RemoteAddr().String(), ":")[0]
+	log.Printf("remoteAddress: %v\n", remoteAddress)
 	if net.ParseIP(remoteAddress).To16() != nil {
 		return dns.NewRR(fmt.Sprintf("%s A %s", host, remoteAddress))
 	}
@@ -33,10 +35,14 @@ func generateAnswerRecord(host string, w dns.ResponseWriter) (dns.RR, error) {
 // It checks whether DNS packet is correct, fetches source IP address
 // and builds appropriate DNS response message
 func dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
+
+	log.Println("Handler works" + r.String())
 	defer w.Close()
 	const host = "ip.octogan.net"
-	answer, _ := generateAnswerRecord(host, w)
-
+	answer, err := generateAnswerRecord(host, w)
+	if err != nil {
+		log.Printf("Caught error %v\n", err)
+	}
 	response := new(dns.Msg)
 	response.SetReply(r)
 	response.Answer = append(response.Answer, answer)
@@ -46,7 +52,7 @@ func dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
 func Serve(context Context) {
 	dns.HandleFunc(".", dnsHandler)
 	server := &dns.Server{
-		Addr: ":53",
+		Addr: ":5300",
 		Net:  "udp",
 	}
 
