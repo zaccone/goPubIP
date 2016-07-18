@@ -6,4 +6,5 @@ EXPOSE 5300
 
 COPY ca-certificates.crt /etc/ssl/certs
 ADD goPubIP /
-CMD ["/goPubIP"]
+
+ENTRYPOINT ["/goPubIP"]
