@@ -43,7 +43,7 @@ func generateAnswerRecord(host string, qType uint16, w dns.ResponseWriter,
 	}
 
 	return nil, errors.New(fmt.Sprintf("Source address %v mismatches type %v\n",
-		remoteAddress.IP.String(), qTypeToString(qType)))
+		remoteAddress.IP.String(), dns.TypeToString[qType]))
 }
 
 // dnsHandler holds main logic of the application.
@@ -59,14 +59,16 @@ func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
 	defer w.WriteMsg(response)
 
 	if len(r.Question) == 0 {
-		// return some err
+		response.Rcode = dns.RcodeFormatError
+		return
+	} else if len(r.Question) > 1 || r.Rcode != dns.OpcodeQuery {
+		response.Rcode = dns.RcodeNotImplemented
 		return
 	}
 
 	question := r.Question[0]
 
 	if question.Qtype != dns.TypeA && question.Qtype != dns.TypeAAAA {
-		//w.WriteMsg(response)
 		return
 	}
 
@@ -76,7 +78,6 @@ func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
 	if resolver.Host != "." && host != resolver.Host {
 		log.Printf("[QueryID: %v] Host mismatch, got %v configured for %v\n",
 			queryId, host, resolver.Host)
-		//	w.WriteMsg(response)
 		return
 	}
 
@@ -86,7 +87,7 @@ func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
 	} else {
 		response.Answer = append(response.Answer, answer)
 	}
-	//	w.WriteMsg(response)
+	return
 }
 
 func (resolver *Resolver) Serve() {
