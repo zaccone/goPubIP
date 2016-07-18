@@ -1,8 +1,6 @@
 # goPubIP
 Ask me for an A or AAAA record and I will respond with your IP address
 
-[![GoDoc](https://godoc.org/github.com/zaccone/goPubIP?status.svg)](https://godoc.org/github.com/zaccone/goPubIP)
-
 ## Installation
 ```
 $ go get github.com/miekg/dns
@@ -31,14 +29,14 @@ Usage of goPubIP:
 
 ## Running goPubIP
 
-If you run it without any options goPubIP will by default listen on both IPv4 and IPv6 interfaces, on port 5300 and will respond to A 
-and AAAA queries for ANY host. If you want to limit proper responses to queries for a given host specify it as a {-h, --host} option. 
-Mind that host must end with a dot ('.'). 
+If you run it without any options goPubIP will by default listen on both IPv4 and IPv6 interfaces, on port 5300 and will respond to A
+and AAAA queries for ANY host. If you want to limit proper responses to queries for a given host specify it as a {-h, --host} option.
+Mind that host must end with a dot ('.').
 
 How to run:
 
 ```
-$ goPubIP -h ip.example.com. 
+$ goPubIP -h ip.example.com.
 ```
 
 Command above will run a server on 0.0.0.0:5300 and will respond to queries for ip.example.com {A,AAAA} record only.
@@ -48,7 +46,7 @@ Command above will run a server on 0.0.0.0:5300 and will respond to queries for 
 By design any query other than A or AAAA will return in an empty response, that is, no IP address will be resolved.
 If the caller's address is IPv6 and caller queries for A record an empty response will be returned.
 If the caller's address is IPv4 and caller queries for either A record a response with callers source address will be returned.
-If caller's address is IPv4 and caller queries for AAAA record goPubIP returns IPv6 address converted from callers IPv4 address 
+If caller's address is IPv4 and caller queries for AAAA record goPubIP returns IPv6 address converted from callers IPv4 address
 (i.e. if callers address is 127.0.0.1 the response will be ::ffff:127.0.0.1).
 
 
