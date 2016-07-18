@@ -17,16 +17,6 @@ type Resolver struct {
 	Host string
 }
 
-func qTypeToString(qType uint16) string {
-	if qType == dns.TypeA {
-		return "A"
-	} else if qType == dns.TypeAAAA {
-		return "AAAA"
-	}
-
-	return ""
-}
-
 func generateAnswerRecord(host string, qType uint16, w dns.ResponseWriter,
 	queryId uint16) (dns.RR, error) {
 
