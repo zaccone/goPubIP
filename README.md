@@ -95,3 +95,21 @@ $ dig  -p 5300 -6  A  ip.example.com @::1
 ;; WHEN: Mon Jul 18 15:22:23 CEST 2016
 ;; MSG SIZE  rcvd: 32
 ```
+
+### Running goPubIP in Docker
+
+To run basic resolver simply type in your command line:
+
+```
+$ docker run -d --name pubip -p 5300:5300/udp zaccone/gopubip:latest
+```
+
+You can specify goPubIP options (like -a, -h, -p) if you want and those will be reflected in the configuration, for instance:
+
+```
+$ docker run -d --name pubip -p 5300:5300/udp zaccone/gopubip:latest -h ip.example.com
+$ docker logs pubip
+  2016/07/18 22:16:52 Starting server at 0.0.0.0:5300, Query host: ip.example.com
+```
+
+Bear in mind that Docker by default won't respond to queries from IPv6 address.
