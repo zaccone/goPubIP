@@ -1,6 +1,8 @@
 # goPubIP
 Ask me for an A or AAAA record and I will respond with your IP address
 
+[![GoDoc](https://godoc.org/github.com/zaccone/goPubIP?status.svg)](https://godoc.org/github.com/zaccone/goPubIP)
+
 ## Installation
 ```
 $ go get github.com/miekg/dns
