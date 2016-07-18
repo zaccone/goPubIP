@@ -27,8 +27,10 @@ func qTypeToString(qType uint16) string {
 	return ""
 }
 
-func generateAnswerRecord(host string, qType uint16, w dns.ResponseWriter) (dns.RR, error) {
-	log.Printf("Source IP address: %v\n", w.RemoteAddr().String())
+func generateAnswerRecord(host string, qType uint16, w dns.ResponseWriter,
+	queryId uint16) (dns.RR, error) {
+
+	log.Printf("[QueryID: %v] Source IP address: %v\n", queryId, w.RemoteAddr().String())
 	remoteAddress, _ := net.ResolveUDPAddr(UDP, w.RemoteAddr().String())
 
 	if remoteAddress.IP.To4() != nil && qType == dns.TypeA {
@@ -48,11 +50,12 @@ func generateAnswerRecord(host string, qType uint16, w dns.ResponseWriter) (dns.
 // It checks whether DNS packet is correct, fetches source IP address
 // and builds appropriate DNS response message
 func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
-
-	defer w.Close()
+	queryId := r.MsgHdr.Id
 
 	response := new(dns.Msg)
 	response.SetReply(r)
+
+	defer w.Close()
 	defer w.WriteMsg(response)
 
 	if len(r.Question) == 0 {
@@ -68,17 +71,18 @@ func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
 	}
 
 	host := question.Name
-	log.Printf("Got question for host: %v\n", host)
+	log.Printf("[QueryID: %v] Got question for host: %v\n", queryId, host)
 
 	if resolver.Host != "." && host != resolver.Host {
-		log.Printf("Host mismatch, got %v configured for %v\n", host, resolver.Host)
+		log.Printf("[QueryID: %v] Host mismatch, got %v configured for %v\n",
+			queryId, host, resolver.Host)
 		//	w.WriteMsg(response)
 		return
 	}
 
-	answer, err := generateAnswerRecord(host, question.Qtype, w)
+	answer, err := generateAnswerRecord(host, question.Qtype, w, queryId)
 	if err != nil {
-		log.Printf("Error while generating answer record: %v\n", err)
+		log.Printf("[QueryID: %v] Error while generating answer record: %v\n", queryId, err)
 	} else {
 		response.Answer = append(response.Answer, answer)
 	}
@@ -93,6 +97,6 @@ func (resolver *Resolver) Serve() {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("%v\n", err)
 	}
 }
