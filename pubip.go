@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -9,7 +8,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-const UDP = "udp"
+const udp = "udp"
 
 // Resolver is a struct that keeps configured parameters for the DNS server.
 // That would be Port (port to listen on), Addr (address to listen on) and Host
@@ -35,10 +34,10 @@ type Resolver struct {
 // However, if the address is IPv4 and query type record is AAAA a IPv6 address
 // will be returned (IPv4 in IPv6)
 func generateAnswerRecord(host string, qType uint16, w dns.ResponseWriter,
-	queryId uint16) (dns.RR, error) {
+	queryID uint16) (dns.RR, error) {
 
-	log.Printf("[QueryID: %v] Source IP address: %v\n", queryId, w.RemoteAddr().String())
-	remoteAddress, _ := net.ResolveUDPAddr(UDP, w.RemoteAddr().String())
+	log.Printf("[QueryID: %v] Source IP address: %v\n", queryID, w.RemoteAddr().String())
+	remoteAddress, _ := net.ResolveUDPAddr(udp, w.RemoteAddr().String())
 
 	if remoteAddress.IP.To4() != nil && qType == dns.TypeA {
 		return dns.NewRR(
@@ -49,15 +48,15 @@ func generateAnswerRecord(host string, qType uint16, w dns.ResponseWriter,
 			fmt.Sprintf("%s 0 IN AAAA %s", host, remoteAddress.IP.String()))
 	}
 
-	return nil, errors.New(fmt.Sprintf("Source address %v mismatches type %v\n",
-		remoteAddress.IP.String(), dns.TypeToString[qType]))
+	return nil, fmt.Errorf("Source address %v mismatches type %v\n",
+		remoteAddress.IP.String(), dns.TypeToString[qType])
 }
 
 // dnsHandler holds main logic of the application.
 // It checks whether DNS packet is correct, fetches source IP address
 // and builds appropriate DNS response message
 func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
-	queryId := r.MsgHdr.Id
+	queryID := r.MsgHdr.Id
 
 	response := new(dns.Msg)
 	response.SetReply(r)
@@ -80,17 +79,17 @@ func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
 	}
 
 	host := question.Name
-	log.Printf("[QueryID: %v] Got question for host: %v\n", queryId, host)
+	log.Printf("[QueryID: %v] Got question for host: %v\n", queryID, host)
 
 	if resolver.Host != "." && host != resolver.Host {
 		log.Printf("[QueryID: %v] Host mismatch, got %v configured for %v\n",
-			queryId, host, resolver.Host)
+			queryID, host, resolver.Host)
 		return
 	}
 
-	answer, err := generateAnswerRecord(host, question.Qtype, w, queryId)
+	answer, err := generateAnswerRecord(host, question.Qtype, w, queryID)
 	if err != nil {
-		log.Printf("[QueryID: %v] Error while generating answer record: %v\n", queryId, err)
+		log.Printf("[QueryID: %v] Error while generating answer record: %v\n", queryID, err)
 	} else {
 		response.Answer = append(response.Answer, answer)
 	}
@@ -103,7 +102,7 @@ func (resolver *Resolver) Serve() {
 	dns.HandleFunc(".", resolver.dnsHandler)
 	server := &dns.Server{
 		Addr: fmt.Sprintf("%s:%s", resolver.Addr, resolver.Port),
-		Net:  UDP,
+		Net:  udp,
 	}
 
 	if err := server.ListenAndServe(); err != nil {
