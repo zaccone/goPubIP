@@ -2,6 +2,9 @@
 
 all: deps build
 
+install:
+	go install
+
 build:
 	go build
 
