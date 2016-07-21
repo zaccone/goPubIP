@@ -5,9 +5,18 @@ Ask me for an A or AAAA record and I will respond with your IP address
 [![Build Status](https://travis-ci.org/zaccone/goPubIP.svg?branch=master)](https://travis-ci.org/zaccone/goPubIP)
 
 ## Installation
+
+```
+$ go get github.com/zaccone/goPubIP
+$ cd $GOPATH/src/github.com/zaccone/goPubIP
+$ make deps && make install
+```
+or alternatively
+
 ```
 $ go get github.com/miekg/dns
 $ go get github.com/zaccone/goPubIP
+$ cd $GOPATH/src/github.com/zaccone/goPubIP
 $ go install
 ```
 
