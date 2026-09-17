@@ -1,10 +1,10 @@
 FROM scratch
 
-MAINTAINER Marek Denis <marek.denis+zaccone@gmail.com>
+LABEL org.opencontainers.image.authors="Marek Denis <marek.denis+zaccone@gmail.com>"
 
-EXPOSE 5300
+EXPOSE 5300/udp
 
 COPY ca-certificates.crt /etc/ssl/certs
-ADD goPubIP /
+COPY goPubIP /
 
 ENTRYPOINT ["/goPubIP"]
