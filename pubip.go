@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"net"
+	"net/netip"
 
-	"github.com/miekg/dns"
+	"codeberg.org/miekg/dns"
+	"codeberg.org/miekg/dns/rdata"
 )
 
 const udp = "udp"
@@ -37,51 +39,81 @@ func generateAnswerRecord(host string, qType uint16, w dns.ResponseWriter,
 	queryID uint16) (dns.RR, error) {
 
 	log.Printf("[QueryID: %v] Source IP address: %v\n", queryID, w.RemoteAddr().String())
-	remoteAddress, _ := net.ResolveUDPAddr(udp, w.RemoteAddr().String())
-
-	if remoteAddress.IP.To4() != nil && qType == dns.TypeA {
-		return dns.NewRR(
-			fmt.Sprintf("%s 0 IN A %s", host, remoteAddress.IP.String()))
+	remoteAddress, err := netip.ParseAddrPort(w.RemoteAddr().String())
+	if err != nil {
+		return nil, err
 	}
-	if remoteAddress.IP.To16() != nil && qType == dns.TypeAAAA {
-		// Preserve IPv4-mapped IPv6 answers without relying on zone-text parsing.
+	ip := remoteAddress.Addr().Unmap()
+
+	if ip.Is4() && qType == dns.TypeA {
+		return &dns.A{
+			Hdr: dns.Header{Name: host, Class: dns.ClassINET},
+			A:   rdata.A{Addr: ip},
+		}, nil
+	}
+	if ip.IsValid() && qType == dns.TypeAAAA {
+		// As16 preserves the documented IPv4-mapped IPv6 answer.
 		return &dns.AAAA{
-			Hdr:  dns.RR_Header{Name: host, Rrtype: dns.TypeAAAA, Class: dns.ClassINET},
-			AAAA: remoteAddress.IP.To16(),
+			Hdr:  dns.Header{Name: host, Class: dns.ClassINET},
+			AAAA: rdata.AAAA{Addr: netip.AddrFrom16(ip.As16())},
 		}, nil
 	}
 
 	return nil, fmt.Errorf("Source address %v mismatches type %v\n",
-		remoteAddress.IP.String(), dns.TypeToString[qType])
+		ip.String(), dns.TypeToString[qType])
 }
 
 // dnsHandler holds main logic of the application.
 // It checks whether DNS packet is correct, fetches source IP address
 // and builds appropriate DNS response message
-func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
-	queryID := r.MsgHdr.Id
+func (resolver *Resolver) dnsHandler(_ context.Context, w dns.ResponseWriter, r *dns.Msg) {
+	if len(r.Data) > 0 {
+		if err := r.Unpack(); err != nil {
+			log.Printf("Error unpacking query: %v", err)
+			return
+		}
+	}
+	queryID := r.ID
+	requestHeader := r.MsgHeader
+	questionCount := len(r.Question)
 
-	response := new(dns.Msg)
-	response.SetReply(r)
+	// Reuse the incoming message so WriteTo returns its buffer to the server pool.
+	response := r
+	response.Reset()
+	if questionCount > 0 {
+		response.Question = response.Question[:1]
+	}
+	response.MsgHeader = dns.MsgHeader{ID: queryID, Opcode: requestHeader.Opcode, Response: true}
+	if requestHeader.Opcode == dns.OpcodeQuery {
+		response.RecursionDesired = requestHeader.RecursionDesired
+		response.CheckingDisabled = requestHeader.CheckingDisabled
+	}
+	// The server owns the UDP socket; closing the writer would stop the listener.
+	defer func() {
+		if err := response.Pack(); err != nil {
+			log.Printf("[QueryID: %v] Error packing response: %v", queryID, err)
+			return
+		}
+		if _, err := response.WriteTo(w); err != nil {
+			log.Printf("[QueryID: %v] Error writing response: %v", queryID, err)
+		}
+	}()
 
-	defer w.Close()
-	defer w.WriteMsg(response)
-
-	if len(r.Question) == 0 {
+	if questionCount == 0 {
 		response.Rcode = dns.RcodeFormatError
 		return
-	} else if len(r.Question) > 1 || r.Rcode != dns.OpcodeQuery {
+	} else if questionCount > 1 || requestHeader.Rcode != dns.OpcodeQuery {
 		response.Rcode = dns.RcodeNotImplemented
 		return
 	}
 
 	question := r.Question[0]
 
-	if question.Qtype != dns.TypeA && question.Qtype != dns.TypeAAAA {
+	if dns.RRToType(question) != dns.TypeA && dns.RRToType(question) != dns.TypeAAAA {
 		return
 	}
 
-	host := question.Name
+	host := question.Header().Name
 	log.Printf("[QueryID: %v] Got question for host: %v\n", queryID, host)
 
 	if resolver.Host != "." && host != resolver.Host {
@@ -90,7 +122,7 @@ func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
 		return
 	}
 
-	answer, err := generateAnswerRecord(host, question.Qtype, w, queryID)
+	answer, err := generateAnswerRecord(host, dns.RRToType(question), w, queryID)
 	if err != nil {
 		log.Printf("[QueryID: %v] Error while generating answer record: %v\n", queryID, err)
 	} else {
@@ -102,10 +134,10 @@ func (resolver *Resolver) dnsHandler(w dns.ResponseWriter, r *dns.Msg) {
 // Serve runs DNS server based on provided (or default) parameters like address
 // to listen on, port  or host
 func (resolver *Resolver) Serve() {
-	dns.HandleFunc(".", resolver.dnsHandler)
 	server := &dns.Server{
-		Addr: fmt.Sprintf("%s:%s", resolver.Addr, resolver.Port),
-		Net:  udp,
+		Addr:    fmt.Sprintf("%s:%s", resolver.Addr, resolver.Port),
+		Net:     udp,
+		Handler: dns.HandlerFunc(resolver.dnsHandler),
 	}
 
 	if err := server.ListenAndServe(); err != nil {

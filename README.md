@@ -143,6 +143,10 @@ go test -race ./...
 make build
 ```
 
+The DNS library is [codeberg.org/miekg/dns](https://codeberg.org/miekg/dns),
+the successor to `github.com/miekg/dns`. Its version is pinned because the
+upstream API is still evolving.
+
 `make deps` downloads the versions pinned in `go.mod` and `go.sum`; it does not
 upgrade them.
 
