@@ -4,8 +4,7 @@ A small UDP DNS server that replies to A and AAAA queries with the client's
 source IP address. Use it to discover the address the server sees for a client.
 It does not perform recursive DNS lookups.
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/zaccone/goPubIP)](https://goreportcard.com/report/github.com/zaccone/goPubIP)
-[![Go](https://github.com/zaccone/goPubIP/actions/workflows/go.yml/badge.svg)](https://github.com/zaccone/goPubIP/actions/workflows/go.yml)
+[![Go CI](https://github.com/zaccone/goPubIP/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/zaccone/goPubIP/actions/workflows/go.yml)
 
 ## Installation
 
