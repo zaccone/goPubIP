@@ -2,7 +2,7 @@
 Ask me for an A or AAAA record and I will respond with your IP address
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/zaccone/goPubIP)](https://goreportcard.com/report/github.com/zaccone/goPubIP)
-[![Build Status](https://travis-ci.org/zaccone/goPubIP.svg?branch=master)](https://travis-ci.org/zaccone/goPubIP)
+[![Go](https://github.com/zaccone/goPubIP/actions/workflows/go.yml/badge.svg)](https://github.com/zaccone/goPubIP/actions/workflows/go.yml)
 
 ## Installation
 
