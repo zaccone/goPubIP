@@ -5,6 +5,7 @@ source IP address. Use it to discover the address the server sees for a client.
 It does not perform recursive DNS lookups.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/zaccone/goPubIP)](https://goreportcard.com/report/github.com/zaccone/goPubIP)
+[![Go](https://github.com/zaccone/goPubIP/actions/workflows/go.yml/badge.svg)](https://github.com/zaccone/goPubIP/actions/workflows/go.yml)
 
 ## Installation
 
@@ -138,6 +139,7 @@ docker rm pubip
 ```sh
 go mod verify
 go vet ./...
+go test -race ./...
 make build
 ```
 

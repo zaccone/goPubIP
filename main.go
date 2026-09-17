@@ -23,11 +23,11 @@ func init() {
 	AddrStr := "Address to listen on, mind that IPv6 address must be in format [ip6address]"
 	flag.StringVar(&addr, "a", "0.0.0.0", AddrStr)
 	flag.StringVar(&addr, "address", "0.0.0.0", AddrStr)
-
-	flag.Parse()
 }
 
 func main() {
+	flag.Parse()
+
 	resolver := &Resolver{
 		port, addr, host,
 	}
