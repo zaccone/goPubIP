@@ -1,133 +1,149 @@
 # goPubIP
-Ask me for an A or AAAA record and I will respond with your IP address
+
+A small UDP DNS server that replies to A and AAAA queries with the client's
+source IP address. Use it to discover the address the server sees for a client.
+It does not perform recursive DNS lookups.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/zaccone/goPubIP)](https://goreportcard.com/report/github.com/zaccone/goPubIP)
-[![Build Status](https://travis-ci.org/zaccone/goPubIP.svg?branch=master)](https://travis-ci.org/zaccone/goPubIP)
 
 ## Installation
 
 Requires Go 1.27 or newer.
 
-Install the latest version:
-
 ```sh
 go install github.com/zaccone/goPubIP@latest
 ```
 
-Or build from source using the pinned module dependencies:
+The binary is installed in `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is
+unset. Add that directory to your `PATH`.
+
+To build from source with the pinned module dependencies:
 
 ```sh
 git clone https://github.com/zaccone/goPubIP.git
 cd goPubIP
 make all
-make install
+./goPubIP
 ```
 
-The installed binary is placed in `GOBIN`, or `$(go env GOPATH)/bin` when
-`GOBIN` is unset. Add that directory to your `PATH`.
+Run `make install` to install your local checkout, or `make clean` to remove
+local build output.
 
-## Usage
+## Quick start
 
-```
-$ goPubIP -h
-Usage of goPubIP:
-  -a string
-        Address to listen on, mind that IPv6 address must be in format [ip6address] (default "0.0.0.0")
-  -address string
-        Address to listen on, mind that IPv6 address must be in format [ip6address] (default "0.0.0.0")
-  -h string
-        RR to response to, host must end with a single dot ('.') (default ".")
-  -host string
-        RR to response to, host must end with a single dot ('.') (default ".")
-  -p string
-        Port to listen to (default "5300")
-  -port string
-        Port to listen to (default "5300")
+Start a server on port 5300 that answers queries for `ip.example.com.`:
+
+```sh
+goPubIP -host ip.example.com.
 ```
 
-## Running goPubIP
+In another terminal, query it with `dig`:
 
-If you run it without any options goPubIP will by default listen on both IPv4 and IPv6 interfaces, on port 5300 and will respond to A
-and AAAA queries for ANY host. If you want to limit proper responses to queries for a given host specify it as a {-h, --host} option.
-Mind that host must end with a dot ('.').
+```sh
+dig +short @127.0.0.1 -p 5300 ip.example.com. A
+# 127.0.0.1
 
-How to run:
-
-```
-$ goPubIP -h ip.example.com.
+dig +short @127.0.0.1 -p 5300 ip.example.com. AAAA
+# ::ffff:127.0.0.1
 ```
 
-Command above will run a server on 0.0.0.0:5300 and will respond to queries for ip.example.com {A,AAAA} record only.
+Replace `127.0.0.1` after `@` with your server's address to query it remotely.
+The reply contains the source address seen by the server, which may be a NAT
+or DNS forwarder's address if the query passes through one.
 
-## DNS response
+## Options
 
-By design any query other than A or AAAA will return in an empty response, that is, no IP address will be resolved.
-If the caller's address is IPv6 and caller queries for A record an empty response will be returned.
-If the caller's address is IPv4 and caller queries for either A record a response with callers source address will be returned.
-If caller's address is IPv4 and caller queries for AAAA record goPubIP returns IPv6 address converted from callers IPv4 address
-(i.e. if callers address is 127.0.0.1 the response will be ::ffff:127.0.0.1).
+| Short flag | Long flag | Default | Description |
+| --- | --- | --- | --- |
+| `-a` | `-address` | `0.0.0.0` | Address to listen on. Enclose IPv6 addresses in brackets. |
+| `-p` | `-port` | `5300` | UDP port to listen on. |
+| `-h` | `-host` | `.` | Query name to answer. `.` accepts any name. |
 
+A configured host must end with a dot, for example `ip.example.com.`. Host
+matching is exact, including letter case. Queries for other names receive an
+empty answer.
 
-## Examples of client commands
+`-h` requires a host value; it is not a help flag. Display usage with:
 
-```
-$ dig +short -p 5300  ip.example.com @127.0.0.1
-127.0.0.1
-```
-
-```
-$ dig +short -p 5300 AAAA  ip.example.com @::1
-::1
-```
-
-```
-$ dig +short -p 5300 AAAA  ip.example.com @127.0.0.1
-::ffff:127.0.0.1
+```sh
+goPubIP -help
 ```
 
-## Invalid queries
+With no options, the server listens on `0.0.0.0:5300` and accepts any query name.
+IPv6 availability on this wildcard listener depends on the operating system.
+To listen explicitly on IPv6 loopback:
 
-Querying for an A record from a IPv6 source address will result in an empty response.
-
-```
-$ dig +short -p 5300 -6  A  ip.example.com @::1
-```
-
-Same, but with full response:
-
-```
-$ dig  -p 5300 -6  A  ip.example.com @::1
-
-; <<>> DiG 9.9.5-9+deb8u6-Debian <<>> -p 5300 -6 A ip.example.com @::1
-;; global options: +cmd
-;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 27926
-;; flags: qr rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; WARNING: recursion requested but not available
-
-;; QUESTION SECTION:
-;ip.example.com.                        IN      A
-
-;; Query time: 3 msec
-;; SERVER: ::1#5300(::1)
-;; WHEN: Mon Jul 18 15:22:23 CEST 2016
-;; MSG SIZE  rcvd: 32
+```sh
+goPubIP -address '[::1]' -port 5300 -host ip.example.com.
 ```
 
-### Running goPubIP in Docker
+Query that listener from another terminal:
 
-To run basic resolver simply type in your command line:
-
-```
-$ docker run -d --name pubip -p 5300:5300/udp zaccone/gopubip:latest
-```
-
-You can specify goPubIP options (like -a, -h, -p) if you want and those will be reflected in the configuration, for instance:
-
-```
-$ docker run -d --name pubip -p 5300:5300/udp zaccone/gopubip:latest -h ip.example.com
-$ docker logs pubip
-  2016/07/18 22:16:52 Starting server at 0.0.0.0:5300, Query host: ip.example.com
+```sh
+dig +short @::1 -p 5300 ip.example.com. AAAA
+# ::1
 ```
 
-Bear in mind that Docker by default won't respond to queries from IPv6 address.
+## Response behavior
+
+| Client source address | Query type | Answer |
+| --- | --- | --- |
+| IPv4 | A | Client's IPv4 address |
+| IPv4 | AAAA | IPv4-mapped IPv6 address, such as `::ffff:192.0.2.1` |
+| IPv6 | AAAA | Client's IPv6 address |
+| IPv6 | A | Empty answer |
+| Either | Any other type | Empty answer |
+
+Answers have a TTL of zero. Empty answers for unsupported types or host/address
+mismatches use the DNS `NOERROR` response code; they are not `NXDOMAIN` replies.
+
+For example, an A query to the IPv6 loopback listener returns no answer records:
+
+```sh
+dig @::1 -p 5300 ip.example.com. A
+```
+
+## Docker
+
+Build the image from your checkout on Linux with Go, Make, Docker, and a CA
+certificate bundle at `/etc/ssl/certs/ca-certificates.crt`:
+
+```sh
+make container
+```
+
+The existing build target produces a static Linux binary for the build machine's
+architecture and packages it in a `scratch` image named `zaccone/gopubip`.
+
+Run the locally built image and publish its UDP port:
+
+```sh
+docker run -d --name pubip -p 5300:5300/udp zaccone/gopubip -host ip.example.com.
+docker logs pubip
+```
+
+Application flags go after the image name. To answer queries for any host, omit
+`-host ip.example.com.`. IPv6 access depends on your Docker host and network
+configuration.
+
+Stop and remove the container when finished:
+
+```sh
+docker stop pubip
+docker rm pubip
+```
+
+## Development
+
+```sh
+go mod verify
+go vet ./...
+make build
+```
+
+`make deps` downloads the versions pinned in `go.mod` and `go.sum`; it does not
+upgrade them.
+
+## License
+
+[MIT](LICENSE)
