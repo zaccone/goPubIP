@@ -6,19 +6,25 @@ Ask me for an A or AAAA record and I will respond with your IP address
 
 ## Installation
 
-```
-$ go get github.com/zaccone/goPubIP
-$ cd $GOPATH/src/github.com/zaccone/goPubIP
-$ make deps && make install
-```
-or alternatively
+Requires Go 1.27 or newer.
 
+Install the latest version:
+
+```sh
+go install github.com/zaccone/goPubIP@latest
 ```
-$ go get github.com/miekg/dns
-$ go get github.com/zaccone/goPubIP
-$ cd $GOPATH/src/github.com/zaccone/goPubIP
-$ go install
+
+Or build from source using the pinned module dependencies:
+
+```sh
+git clone https://github.com/zaccone/goPubIP.git
+cd goPubIP
+make all
+make install
 ```
+
+The installed binary is placed in `GOBIN`, or `$(go env GOPATH)/bin` when
+`GOBIN` is unset. Add that directory to your `PATH`.
 
 ## Usage
 

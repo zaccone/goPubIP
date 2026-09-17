@@ -1,4 +1,4 @@
-.PHONY: container
+.PHONY: all install build deps container-bin container clean
 
 all: deps build
 
@@ -9,10 +9,10 @@ build:
 	go build
 
 deps:
-	go get -u github.com/miekg/dns
+	go mod download
 
 container-bin:
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o goPubIP .
+	CGO_ENABLED=0 GOOS=linux go build -o goPubIP .
 
 container: deps container-bin
 	install /etc/ssl/certs/ca-certificates.crt ca-certificates.crt
