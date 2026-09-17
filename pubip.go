@@ -44,8 +44,11 @@ func generateAnswerRecord(host string, qType uint16, w dns.ResponseWriter,
 			fmt.Sprintf("%s 0 IN A %s", host, remoteAddress.IP.String()))
 	}
 	if remoteAddress.IP.To16() != nil && qType == dns.TypeAAAA {
-		return dns.NewRR(
-			fmt.Sprintf("%s 0 IN AAAA %s", host, remoteAddress.IP.String()))
+		// Preserve IPv4-mapped IPv6 answers without relying on zone-text parsing.
+		return &dns.AAAA{
+			Hdr:  dns.RR_Header{Name: host, Rrtype: dns.TypeAAAA, Class: dns.ClassINET},
+			AAAA: remoteAddress.IP.To16(),
+		}, nil
 	}
 
 	return nil, fmt.Errorf("Source address %v mismatches type %v\n",
